@@ -266,7 +266,7 @@ try {
 			}
 			
 			if(events.length != 0){
-				const res2 = await dynamicPool.exec({
+				const res2 = dynamicPool.exec({
 					task: calendarCreationTask,
 					workerData: {
 						language: language,

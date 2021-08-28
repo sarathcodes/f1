@@ -129,164 +129,162 @@ if (!fs.existsSync(downloadDir)){
 }
 
 
-(async () => {
-	try {
+try {
 
-		// For each filename, create a ics file.
-		for (language of i18n.locales) {
-			// Create the folder in public...
-			let dir = `public/download/${language}`;
-			if (language != "en" && !fs.existsSync(dir)){
-				fs.mkdirSync(dir);
+	// For each filename, create a ics file.
+	for (language of i18n.locales) {
+		// Create the folder in public...
+		let dir = `public/download/${language}`;
+		if (language != "en" && !fs.existsSync(dir)){
+			fs.mkdirSync(dir);
+		}
+		
+		let i18nStrings = fs.readFileSync(`locales/${language}/localization.json`);
+		let localizedStrings = JSON.parse(i18nStrings);
+	
+		var languageFilesnames = language == "en" ? fileNames : localizedFilenames;
+	
+		for (request of languageFilesnames) {
+			let alarmEnabled = request.includes("alarm");
+	
+			let alarmOffset = 30;
+			if (alarmEnabled) {
+				let requestArray = request.split("-");
+				alarmOffset = requestArray.slice(-1)[0];
 			}
-			
-			let i18nStrings = fs.readFileSync(`locales/${language}/localization.json`);
-			let localizedStrings = JSON.parse(i18nStrings);
-		
-			var languageFilesnames = language == "en" ? fileNames : localizedFilenames;
-		
-			for (request of languageFilesnames) {
-				let alarmEnabled = request.includes("alarm");
-		
-				let alarmOffset = 30;
-				if (alarmEnabled) {
-					let requestArray = request.split("-");
-					alarmOffset = requestArray.slice(-1)[0];
-				}
-		
-				let events = [];
-		
-				const races = data.races;
-		
-				let i = 0;
-				for (i = 0; i < races.length; i++) {
-					let race = races[i];
-		
-					// Check we have sessions as we'll keep them out of TBC races unless we have tentative dates.
-					if (race.sessions != null) {
-						// Sessions
-						let s = 0;
-						for (s = 0; s < Object.keys(race.sessions).length; s++) {
-							let sessionKey = Object.keys(race.sessions)[s];
-							let session = race.sessions[sessionKey];
-		
-							// Skip
-							
-							// F1: 
-							// Some logic to include Sprint Qualifying Races when "Qualifying" is selected.
-							if(siteKey == "f1"){
-								if(!request.includes(sessionMap[sessionKey]) && !(sessionMap[sessionKey] == "sprintQualifying" && request.includes("q")))  continue;
-							} else {
-								if(!request.includes(sessionMap[sessionKey])) continue;	
-							}
-							
-							let title = race.name;
-							if (localizedStrings.races[race.localeKey]) {
-								title = localizedStrings.races[race.localeKey];
-							}
-		
-							let category = "Grand Prix";
-							
-							// If the session isn't featured then add the session name in front...
-							// Or if there are multiple featured sessions then add the session name in front (sprint, feature etc)...
-							if(!config.featuredSessions[sessionKey] || (config.featuredSessions[sessionKey] && config.featuredSessions.length > 1)){
-								let sessionTitle = localizedStrings.schedule[sessionKey];
-								
-								title = `${sessionTitle} (${title})`;
-								category = sessionTitle;
-							}
-							
-							// Session Length
-							let sessionLength = 120;
-		
-							if(config.sessionLengths != null){
-								if(config.sessionLengths[sessionKey] != null){
-									sessionLength = config.sessionLengths[sessionKey];
-								}
-							}
-							
-							// TODO: Localize....
-							let alarms = [];
-							if (alarmEnabled) {
-								let alarmDescription =
-									title + " starts in " + alarmOffset + " minutes";
-								alarms.push({
-									action: "display",
-									description: alarmDescription,
-									trigger: {minutes: alarmOffset, before: true},
-									repeat: 0
-								});
-							}
-		
-							let start = dayjs(session)
-								.format("YYYY-M-D-H-m")
-								.split("-")
-								.map(function(t){return parseInt(t)});
-								
-							let end = dayjs(session)
-								.add(sessionLength, "minutes")
-								.format("YYYY-M-D-H-m")
-								.split("-")
-								.map(function(t){return parseInt(t)});
-								
-							let status = "CONFIRMED";
-							if (race.tbc) {
-								status = "TENTATIVE";
-		
-								let tbcString = localizedStrings.badges.tbc
-									? localizedStrings.badges.tbc
-									: "TBC";
-								title = `(${tbcString}) ${title}`;
-							}
-		
-							if (race.canceled) {
-								status = "CANCELLED";
-		
-								let cancelledString = localizedStrings.badges.canceled
-									? localizedStrings.badges.canceled
-									: "CANCELED";
-								title = `(${cancelledString}) ${title}`;
-							}
-		
-							let event = {
-								title: title,
-								location: race.location,
-								productId: config.url,
-								uid: "http://" + year + "." + config.url + "/#GP" + i + "_" + year + "_" + sessionKey,
-								categories: [category],
-								start: start,
-								end: end,
-								geo: {lat: race.latitude, lon: race.longitude},
-								sequence: parseInt(year),
-								alarms: alarms,
-								status: status
-							};
-							events.push(event);
+	
+			let events = [];
+	
+			const races = data.races;
+	
+			let i = 0;
+			for (i = 0; i < races.length; i++) {
+				let race = races[i];
+	
+				// Check we have sessions as we'll keep them out of TBC races unless we have tentative dates.
+				if (race.sessions != null) {
+					// Sessions
+					let s = 0;
+					for (s = 0; s < Object.keys(race.sessions).length; s++) {
+						let sessionKey = Object.keys(race.sessions)[s];
+						let session = race.sessions[sessionKey];
+	
+						// Skip
+						
+						// F1: 
+						// Some logic to include Sprint Qualifying Races when "Qualifying" is selected.
+						if(siteKey == "f1"){
+							if(!request.includes(sessionMap[sessionKey]) && !(sessionMap[sessionKey] == "sprintQualifying" && request.includes("q")))  continue;
+						} else {
+							if(!request.includes(sessionMap[sessionKey])) continue;	
 						}
+						
+						let title = race.name;
+						if (localizedStrings.races[race.localeKey]) {
+							title = localizedStrings.races[race.localeKey];
+						}
+	
+						let category = "Grand Prix";
+						
+						// If the session isn't featured then add the session name in front...
+						// Or if there are multiple featured sessions then add the session name in front (sprint, feature etc)...
+						if(!config.featuredSessions[sessionKey] || (config.featuredSessions[sessionKey] && config.featuredSessions.length > 1)){
+							let sessionTitle = localizedStrings.schedule[sessionKey];
+							
+							title = `${sessionTitle} (${title})`;
+							category = sessionTitle;
+						}
+						
+						// Session Length
+						let sessionLength = 120;
+	
+						if(config.sessionLengths != null){
+							if(config.sessionLengths[sessionKey] != null){
+								sessionLength = config.sessionLengths[sessionKey];
+							}
+						}
+						
+						// TODO: Localize....
+						let alarms = [];
+						if (alarmEnabled) {
+							let alarmDescription =
+								title + " starts in " + alarmOffset + " minutes";
+							alarms.push({
+								action: "display",
+								description: alarmDescription,
+								trigger: {minutes: alarmOffset, before: true},
+								repeat: 0
+							});
+						}
+	
+						let start = dayjs(session)
+							.format("YYYY-M-D-H-m")
+							.split("-")
+							.map(function(t){return parseInt(t)});
+							
+						let end = dayjs(session)
+							.add(sessionLength, "minutes")
+							.format("YYYY-M-D-H-m")
+							.split("-")
+							.map(function(t){return parseInt(t)});
+							
+						let status = "CONFIRMED";
+						if (race.tbc) {
+							status = "TENTATIVE";
+	
+							let tbcString = localizedStrings.badges.tbc
+								? localizedStrings.badges.tbc
+								: "TBC";
+							title = `(${tbcString}) ${title}`;
+						}
+	
+						if (race.canceled) {
+							status = "CANCELLED";
+	
+							let cancelledString = localizedStrings.badges.canceled
+								? localizedStrings.badges.canceled
+								: "CANCELED";
+							title = `(${cancelledString}) ${title}`;
+						}
+	
+						let event = {
+							title: title,
+							location: race.location,
+							productId: config.url,
+							uid: "http://" + year + "." + config.url + "/#GP" + i + "_" + year + "_" + sessionKey,
+							categories: [category],
+							start: start,
+							end: end,
+							geo: {lat: race.latitude, lon: race.longitude},
+							sequence: parseInt(year),
+							alarms: alarms,
+							status: status
+						};
+						events.push(event);
 					}
 				}
-				
-				if(events.length != 0){
-					const res2 = await dynamicPool.exec({
-						task: calendarCreationTask,
-						workerData: {
-							language: language,
-							events: events,
-							request: request,
-							siteKey: siteKey
-						},
-					}, 1000);
-				} else {
-					console.log("Skipped creation");
-				} 
 			}
+			
+			if(events.length != 0){
+				const res2 = await dynamicPool.exec({
+					task: calendarCreationTask,
+					workerData: {
+						language: language,
+						events: events,
+						request: request,
+						siteKey: siteKey
+					},
+				}, 1000);
+			} else {
+				console.log("Skipped creation");
+			} 
 		}
 	}
-	catch (err) {
-		console.log(`ERROR: ${err}`);
-	}
-	finally {
-		console.log('Done!!');
-		dynamicPool.destroy();
-	}
-})();
+}
+catch (err) {
+	console.log(`ERROR: ${err}`);
+}
+finally {
+	console.log('Done!!');
+	dynamicPool.destroy();
+}
